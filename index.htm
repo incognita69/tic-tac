@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tres en Línea - Incógnita</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .pantalla {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .visible {
+      display: flex;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #e91e63;
+      margin-bottom: 20px;
+    }
+
+    .botones-inicio button {
+      background-color: #e91e63;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      margin: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .botones-inicio button:hover {
+      background-color: #d81b60;
+    }
+
+    .tablero {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 10px;
+    }
+
+    .cuadro {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5rem;
+      background-color: #2a2a2a;
+      border: 2px solid #444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 12px;
+    }
+
+    .ganador {
+      margin-top: 20px;
+      font-size: 1.4rem;
+    }
+
+    .boton-control {
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .boton-control:hover {
+      background-color: #d81b60;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal-content {
+      background-color: #1e1e1e;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 90%;
+      text-align: center;
+      color: #fff;
+    }
+
+    .modal-content h2 {
+      margin-bottom: 15px;
+      color: #e91e63;
+    }
+
+    .modal-content button {
+      margin-top: 20px;
+      padding: 10px 25px;
+      background-color: #e91e63;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .input-agregar {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .input-agregar input {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 250px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Pantalla de Inicio -->
+  <div class="pantalla visible" id="inicio">
+    <h1>Bienvenido a Incógnita Gato</h1>
+    <div class="botones-inicio">
+      <button onclick="iniciarJuego('normal')">Jugar Normal</button>
+      <button onclick="iniciarJuego('hot')">Jugar Hot 🔥</button>
+    </div>
+  </div>
+
+  <!-- Pantalla del Juego -->
+  <div class="pantalla" id="juego">
+    <h1 id="tituloModo">Tres en Línea</h1>
+    <div class="tablero" id="tablero"></div>
+    <div class="ganador" id="ganador"></div>
+    <button class="boton-control" onclick="reiniciarJuego()">Reiniciar</button>
+    <button class="boton-control" onclick="volverInicio()">Volver al inicio</button>
+
+    <div id="agregarReto" class="input-agregar" style="display: none;">
+      <input type="text" id="nuevoReto" placeholder="Escribe un reto o verdad">
+      <button onclick="agregarReto()">Agregar</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="modalReto">
+    <div class="modal-content">
+      <h2>🔥 Reto para el perdedor:</h2>
+      <p id="textoReto"></p>
+      <button onclick="cerrarModal()">Cerrar</button>
+    </div>
+  </div>
+
+  <script>
+    let modoJuego = "normal";
+    const tablero = document.getElementById('tablero');
+    const ganadorTexto = document.getElementById('ganador');
+    const pantallaInicio = document.getElementById('inicio');
+    const pantallaJuego = document.getElementById('juego');
+    const tituloModo = document.getElementById('tituloModo');
+    const modal = document.getElementById('modalReto');
+    const textoReto = document.getElementById('textoReto');
+    const agregarDiv = document.getElementById('agregarReto');
+    const inputReto = document.getElementById('nuevoReto');
+
+    let turn = 'X';
+    let tableroEstado = ["", "", "", "", "", "", "", "", ""];
+    let juegoActivo = true;
+
+    let retos = [
+      "Confiesa un secreto que nunca has dicho.",
+      "Envía un emoji sexy a alguien al azar.",
+      "Di tu fantasía más extraña.",
+      "Haz una confesión anónima en Incógnita.",
+      "Cambia tu foto de perfil por 1 minuto.",
+      "Verdad o reto, ¡elige uno!"
+    ];
+
+    const combinacionesGanadoras = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    function iniciarJuego(modo) {
+      modoJuego = modo;
+      tituloModo.textContent = modo === "hot" ? "Modo HOT 🔥" : "Modo Normal";
+      pantallaInicio.classList.remove('visible');
+      pantallaJuego.classList.add('visible');
+      agregarDiv.style.display = modo === "hot" ? "flex" : "none";
+      crearTablero();
+    }
+
+    function volverInicio() {
+      pantallaJuego.classList.remove('visible');
+      pantallaInicio.classList.add('visible');
+    }
+
+    function crearTablero() {
+      tablero.innerHTML = "";
+      tableroEstado = ["", "", "", "", "", "", "", "", ""];
+      juegoActivo = true;
+      turn = 'X';
+      ganadorTexto.textContent = "";
+
+      for (let i = 0; i < 9; i++) {
+        const cuadro = document.createElement('div');
+        cuadro.classList.add('cuadro');
+        cuadro.dataset.index = i;
+        cuadro.addEventListener('click', jugar);
+        tablero.appendChild(cuadro);
+      }
+    }
+
+    function jugar(e) {
+      const index = e.target.dataset.index;
+      if (tableroEstado[index] !== "" || !juegoActivo) return;
+
+      tableroEstado[index] = turn;
+      e.target.textContent = turn;
+
+      if (verificarGanador()) {
+        ganadorTexto.textContent = `¡Ganó ${turn}!`;
+        juegoActivo = false;
+
+        if (modoJuego === "hot") {
+          setTimeout(() => {
+            const reto = retos[Math.floor(Math.random() * retos.length)];
+            mostrarModal(reto);
+          }, 300);
+        }
+
+        return;
+      }
+
+      if (!tableroEstado.includes("")) {
+        ganadorTexto.textContent = "¡Empate!";
+        juegoActivo = false;
+        return;
+      }
+
+      turn = turn === 'X' ? 'O' : 'X';
+    }
+
+    function verificarGanador() {
+      return combinacionesGanadoras.some(comb => {
+        const [a, b, c] = comb;
+        return tableroEstado[a] && tableroEstado[a] === tableroEstado[b] && tableroEstado[a] === tableroEstado[c];
+      });
+    }
+
+    function reiniciarJuego() {
+      crearTablero();
+    }
+
+    function mostrarModal(texto) {
+      textoReto.textContent = texto;
+      modal.style.display = "flex";
+    }
+
+    function cerrarModal() {
+      modal.style.display = "none";
+    }
+
+    function agregarReto() {
+      const nuevo = inputReto.value.trim();
+      if (nuevo.length > 0) {
+        retos.push(nuevo);
+        inputReto.value = "";
+        alert("✅ Reto agregado correctamente.");
+      }
+    }
+  </script>
+
+</body>
+</html>
